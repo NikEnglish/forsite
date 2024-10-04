@@ -1,59 +1,67 @@
-let messages = [];
+$(document).ready(function() {
+    // Функция для загрузки сообщений из сервера
+    function loadMessages() {
+        $.ajax({
+            url: '/get-messages',
+            method: 'GET',
+            success: function(response) {
+                const messagesDiv = $('#messages');
+                messagesDiv.empty();
+                
+                $.each(response, function(index, message) {
+                    const msgElement = $('<div>')
+                        .addClass('message')
+                        .html(`
+                            <p><strong>${message.name}</strong> (<em>${message.email}</em>)</p>
+                            <p>${message.message}</p>
+                            <button onclick="markAsRead(${index})">Прочитано</button>
+                            <button onclick="deleteMessage(${index})">Удалить</button>
+                        `);
+                    messagesDiv.append(msgElement);
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('Ошибка при загрузке сообщений:', error);
+                alert('Произошла ошибка при загрузке сообщений. Попробуйте еще раз.');
+            }
+        });
+    }
 
-function loadMessages() {
-    // Загрузка сообщений из локального хранилища
-    messages = JSON.parse(localStorage.getItem('messages')) || [];
-    displayMessages();
-}
+    // Функция для пометки сообщения как прочитанного
+    function markAsRead(index) {
+        $.ajax({
+            url: '/mark-as-read',
+            method: 'POST',
+            data: { index: index },
+            success: function(response) {
+                loadMessages();
+            },
+            error: function(xhr, status, error) {
+                console.error('Ошибка при пометке сообщения как прочитанного:', error);
+                alert('Произошла ошибка при пометке сообщения как прочитанного.');
+            }
+        });
+    }
 
-function displayMessages() {
-    const messagesDiv = document.getElementById('messages');
-    messagesDiv.innerHTML = '';
-    messages.forEach((msg, index) => {
-        const msgElement = document.createElement('div');
-        msgElement.className = 'message';
-        msgElement.innerHTML = `
-            <p><strong>${msg.name}</strong> (<em>${msg.email}</em>)</p>
-            <p>${msg.message}</p>
-            <button onclick="markAsRead(${index})">Прочитано</button>
-            <button onclick="deleteMessage(${index})">Удалить</button>
-        `;
-        messagesDiv.appendChild(msgElement);
-    });
-}
+    // Функция для удаления сообщения
+    function deleteMessage(index) {
+        $.ajax({
+            url: '/delete-message',
+            method: 'POST',
+            data: { index: index },
+            success: function(response) {
+                loadMessages();
+            },
+            error: function(xhr, status, error) {
+                console.error('Ошибка при удалении сообщения:', error);
+                alert('Произошла ошибка при удалении сообщения.');
+            }
+        });
+    }
 
-function markAsRead(index) {
-    messages[index].read = true;
-    localStorage.setItem('messages', JSON.stringify(messages));
-    displayMessages();
-}
+    // Загрузка сообщений при загрузке страницы
+    loadMessages();
 
-function deleteMessage(index) {
-    messages.splice(index, 1);
-    localStorage.setItem('messages', JSON.stringify(messages));
-    displayMessages();
-}
-
-window.addEventListener('load', loadMessages);
-
-// Функция для проверки новых сообщений на основном сайте
-function checkNewMessages() {
-    // Здесь должна быть логика проверки новых сообщений с основного сайта
-    // Например, можно использовать AJAX запрос или fetch API
-    // Для примера, мы будем просто добавлять новые сообщения каждые 5 секунд
-    setTimeout(() => {
-        const newMessage = {
-            name: 'Новое сообщение',
-            email: 'new@example.com',
-            message: 'Это новое сообщение',
-            read: false
-        };
-        messages.push(newMessage);
-        localStorage.setItem('messages', JSON.stringify(messages));
-        displayMessages();
-        checkNewMessages(); // Повторная проверка через 5 секунд
-    }, 5000);
-}
-
-checkNewMessages(); // Начало проверки новых сообщений
-
+    // Проверка новых сообщений каждые 30 секунд
+    setInterval(loadMessages, 30000);
+});
